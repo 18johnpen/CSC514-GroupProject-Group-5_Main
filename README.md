@@ -1,1 +1,1 @@
-# CSC514-GroupProject-Group-5
+# CSCI514-GroupProject
