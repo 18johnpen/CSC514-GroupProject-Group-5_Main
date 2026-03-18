@@ -1,9 +1,9 @@
 {
   "_comments": [
     "These are sample documents showing what each MongoDB collection looks like.",
-    "We picked a few real asteroids from NASA's API to use as examples.",
+    "These are a few real asteroids from NASA's API to use as examples.",
     "The structure mirrors what NASA's NeoWs API actually returns so we",
-    "don't have to do a bunch of transformation before storing it."
+    "don't have to do transformation before storing the data."
   ],
 
   "neo_cache": [
