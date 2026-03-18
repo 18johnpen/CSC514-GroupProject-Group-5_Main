@@ -36,3 +36,13 @@ This saves us from burning through NASA's API rate limit (1000 req/hour
 for a free API key). Popular asteroids like Apophis might get looked up
 dozens of times a day by different users, so caching makes a big difference.
 
+
+----------------------------------------------------------------------------------
+
+Description of Sample Documents
+This contains the data for a few real asteroids from NASA's site.
+The structure mirrors what will be retruned from the API so that
+we don't have to do a bunch of transformation.
+
+-----------------------------------------------------------------------------------
+
