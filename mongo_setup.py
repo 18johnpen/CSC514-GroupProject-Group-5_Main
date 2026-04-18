@@ -22,12 +22,14 @@ Course: CSCI 514
 """
 
 from pymongo import MongoClient, ASCENDING, DESCENDING
+import pymongo
 from pymongo.errors import CollectionInvalid
-import datetime
+import datetime, os
 
 # Connect to MongoDB - in production this would use an env variable
 # for the connection string instead of hardcoding it
-MONGO_URI = "mongodb://localhost:27017/"
+
+MONGO_URI = os.environ.get("MONGO_URI")
 DB_NAME = "neo_tracker"
 
 
