@@ -16,8 +16,7 @@ Author: Group 5 - John Pennig, Mary Lebens, Srivarsha Singireddy
 Course: CSCI 514
 """
 
-import datetime
-import requests
+import datetime, os, requests
 from mongo_setup import get_db
 
 # NASA NeoWs API base URL - we look up individual asteroids by their ID

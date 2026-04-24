@@ -1,62 +1,59 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+from apscheduler.schedulers.background import BackgroundScheduler
+from pymongo.errors import PyMongoError
+import os
+
+from mongo_setup import setup
+from neo_cache_operations import (
+    get_asteroid,
+    search_cached_asteroids,
+    sync_recent_neos,
+    log_search)
+
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
 
-SAMPLE_ASTEROIDS = [
-    {
-        "id": "2000433",
-        "name": "433 Eros",
-        "absolute_magnitude": 10.31,
-        "hazardous": False,
-        "diameter_min": 22.0,
-        "diameter_max": 49.0,
-        "miss_distance": "26,729,000 km",
-        "velocity": "20,000 km/h"
-    },
-    {
-        "id": "99942",
-        "name": "99942 Apophis",
-        "absolute_magnitude": 19.7,
-        "hazardous": True,
-        "diameter_min": 0.31,
-        "diameter_max": 0.68,
-        "miss_distance": "31,000 km",
-        "velocity": "30,728 km/h"
-    },
-    {
-        "id": "25143",
-        "name": "25143 Itokawa",
-        "absolute_magnitude": 19.2,
-        "hazardous": False,
-        "diameter_min": 0.21,
-        "diameter_max": 0.47,
-        "miss_distance": "5,800,000 km",
-        "velocity": "25,000 km/h"
-    }
-]
+try:
+    setup()
+except Exception as error:
+    print(f'MongoDB setup skipped or failed: {error}')
 
-def get_asteroid_by_id(asteroid_id):
-    for asteroid in SAMPLE_ASTEROIDS:
-        if asteroid["id"] == asteroid_id:
-            return asteroid
-    return None
-    
+#Starts a scheduler to sync with NASA's API every 24hrs. 
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(sync_recent_neos, "interval", hours=24, id="sync_recent_neos")
+    scheduler.start()
+
+    try:
+        sync_recent_neos()
+    except Exception as error:
+        print(f'Sync with NASA API failed: {error}')
+
+start_scheduler()
+
+
 @app.route("/")
 def home():
     return render_template("home.html")
 
+
 @app.route("/search")
 def search():
     query = request.args.get("q", "").strip()
-    results = []
 
+    try:
+        results = search_cached_asteroids(query)
+    except PyMongoError as error:
+        print(f"MongoDB search failed: {error}")
+        results = []
+
+    user_id = session.get("user_id", 0)
     if query:
-        for asteroid in SAMPLE_ASTEROIDS:
-            if query.lower() in asteroid["name"].lower() or query in asteroid["id"]:
-                results.append(asteroid)
-    else:
-        results = SAMPLE_ASTEROIDS
+        first_result_id = results[0]["id"] if results else None
+        log_search(user_id, query, first_result_id, len(results))
 
     return render_template("search.html", query=query, results=results)
+
 
 @app.route("/asteroid/<asteroid_id>")
 def asteroid_detail(asteroid_id):
@@ -65,6 +62,7 @@ def asteroid_detail(asteroid_id):
         return "asteroid not found", 404
     
     return render_template("asteroid_detail.html", asteroid=asteroid)
+
 
 @app.route("/save/<asteroid_id>")
 def save_asteroid(asteroid_id):
@@ -78,6 +76,7 @@ def save_asteroid(asteroid_id):
 
     return redirect(url_for("watchlist"))
 
+
 @app.route("/remove/<asteroid_id>")
 def remove_asteroid(asteroid_id):
     watchlist = session.get("watchlist", [])
@@ -87,19 +86,24 @@ def remove_asteroid(asteroid_id):
     
     return redirect(url_for("watchlist"))
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login_register():
     if request.method == "POST":
         session["logged_in"] = True
+        session["user_id"] = 1
         session["user_name"] = request.form.get("first_name", "Demo User")
+        session["email"] = request.form.get("email", "demo@example.com")
         return redirect(url_for("watchlist"))
 
     return render_template("login_register.html")
+
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for("home"))
+
 
 @app.route("/watchlist")
 def watchlist():
@@ -116,12 +120,22 @@ def watchlist():
 
     return render_template("watchlist.html", saved_asteroids=saved_asteroids)
 
+
 @app.route("/settings")
 def settings():
     if not session.get("logged_in"):
         return redirect(url_for("login_register"))
     
     return render_template("settings.html")
+
+
+@app.route("/sync")
+def sync():
+    if not session.get("logged_in"):
+        return redirect(url_for("login_register"))
+    
+    count = sync_recent_neos()
+    return f"NASA sync complete. {count} asteroid records."
 
 
 if __name__ == "__main__":

@@ -30,12 +30,16 @@ import datetime, os
 # for the connection string instead of hardcoding it
 
 MONGO_URI = os.environ.get("MONGO_URI")
-DB_NAME = "neo_tracker"
+DB_NAME = os.environ.get("MONGO_DB_NAME", "neo_tracker")
 
+client = MongoClient(MONGO_URI)
+db = client[DB_NAME]
+
+asteroids_cluster = db["asteroids"]
+watchlist_cluster = db["watchlist"]
 
 def get_db():
     """Return a reference to the neo_tracker database."""
-    client = MongoClient(MONGO_URI)
     return client[DB_NAME]
 
 
