@@ -17,7 +17,7 @@
     <p><strong>Absolute Magnitude:</strong> {{ asteroid.absolute_magnitude }}</p>
     <p><strong>Estimated Diameter:</strong> {{ asteroid.diameter_min }} km - {{ asteroid.diameter_max }} km</p>
 
-    <a class="button" href="{{url_for('save_asteroid, asteroid_id=asteroid.id')}}">Save to Watchlist</a>
+    <a class="button" href="{{url_for('save_asteroid', asteroid_id=asteroid.id)}}">Save to Watchlist</a>
     <a class="button" href="{{url_for('search')}}">Search Again</a>
 </div>
 {% endblock %}

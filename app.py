@@ -6,8 +6,6 @@ import os
 from mongo_setup import setup
 from neo_cache_operations import (
     get_asteroid,
-    search_cached_asteroids,
-    sync_recent_neos,
     log_search)
 
 app = Flask(__name__)

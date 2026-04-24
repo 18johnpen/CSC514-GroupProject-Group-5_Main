@@ -106,7 +106,7 @@ def store_in_cache(asteroid_data: dict, neo_id: str) -> None:
     asteroid_data["_id"] = neo_id
     asteroid_data["id"] = neo_id
     asteroid_data["hazardous"] = asteroid_data.get("is_potentially_hazardous_asteroid", False)
-    asteroid_data["cached_at"] = datetime.datetime.utcnow()
+    asteroid_data["cached_at"] = datetime.datetime.now(datetime.timezone.utc)
 
     # upsert=True means: insert if it doesn't exist, update if it does
     db.neo_cache.replace_one(
@@ -230,58 +230,18 @@ def search_asteroids(query: str, search_type: str = "name", limit: int = 25) -> 
     return list(results)
 
 
-def sync_neo_data(days: int = 7) -> int:
-    """
-    Pull recent NEO data from NASA's feed endpoint and cache it in MongoDB.
-    This is what your app.py scheduler can call every 24 hours.
-
-    Returns:
-        Number of asteroids cached.
-    """
-    end_date = datetime.date.today()
-    start_date = end_date - datetime.timedelta(days=days - 1)
-
-    params = {
-        "start_date": start_date.isoformat(),
-        "end_date": end_date.isoformat(),
-        "api_key": NASA_API_KEY
-    }
-
-    try:
-        response = requests.get(NASA_FEED_URL, params=params, timeout=15)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"NASA feed sync failed: {e}")
-        return 0
-
-    count = 0
-    near_earth_objects = data.get("near_earth_objects", {})
-
-    for date_key in near_earth_objects:
-        for asteroid in near_earth_objects[date_key]:
-            neo_id = str(asteroid.get("id", ""))
-            if neo_id:
-                store_in_cache(asteroid, neo_id)
-                count += 1
-
-    print(f"NASA sync complete. Cached {count} asteroids.")
-    return count
-
-
 def get_dashboard_asteroids(limit: int = 20) -> list:
     """Return cached asteroids for a simple dashboard/list view."""
     db = get_db()
     results = db.neo_cache.find(
         {},
         {
-            "_id": 1,
+            "_id": 0,
             "id": 1,
             "name": 1,
             "estimated_diameter": 1,
             "close_approach_data": 1,
-            "hazardous": 1,
-            "is_potentially_hazardous_asteroid": 1
+            "hazardous": 1
         }
     ).sort("cached_at", -1).limit(limit)
 
