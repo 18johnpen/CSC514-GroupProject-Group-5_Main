@@ -24,7 +24,7 @@ NASA_NEO_URL = "https://api.nasa.gov/neo/rest/v1/neo/"
 
 # We will put our NASA API key here after we sign up for it
 # Using DEMO_KEY is fine for testing but it has lower rate limits
-NASA_API_KEY = "DEMO_KEY"
+NASA_API_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
 
 
 def get_asteroid(neo_id: str) -> dict | None:
@@ -104,6 +104,8 @@ def store_in_cache(asteroid_data: dict, neo_id: str) -> None:
 
     # Add our own fields on top of whatever NASA returned
     asteroid_data["_id"] = neo_id
+    asteroid_data["id"] = neo_id
+    asteroid_data["hazardous"] = asteroid_data.get("is_potentially_hazardous_asteroid", False)
     asteroid_data["cached_at"] = datetime.datetime.utcnow()
 
     # upsert=True means: insert if it doesn't exist, update if it does
@@ -137,11 +139,12 @@ def get_hazardous_asteroids(limit: int = 20) -> list:
         # Only return the fields we actually need for the dashboard card
         # This reduces the data transferred over the network
         {
-            "_id": 1,
+            "_id": 0,
+            "id": 1,
             "name": 1,
             "estimated_diameter": 1,
             "close_approach_data": 1,
-            "is_potentially_hazardous_asteroid": 1
+            "hazardous": 1
         }
     ).limit(limit)
 
@@ -197,5 +200,89 @@ def get_user_search_history(user_id: int, limit: int = 10) -> list:
         {"user_id": user_id},
         {"_id": 0, "query": 1, "neo_id": 1, "timestamp": 1, "result_count": 1}
     ).sort("timestamp", -1).limit(limit)
+
+    return list(results)
+
+def get_asteroid_by_id(neo_id: str) -> dict | None:
+    """Alias used by app.py for the asteroid detail page."""
+    return get_asteroid(neo_id)
+
+
+def search_asteroids(query: str, search_type: str = "name", limit: int = 25) -> list:
+    """
+    Search cached asteroids by name or exact NASA/JPL ID.
+    If searching by ID and it is not cached, try NASA and cache it.
+    """
+    db = get_db()
+    query = (query or "").strip()
+
+    if not query:
+        return []
+
+    if search_type in ("id", "jpl_id", "neo_id"):
+        asteroid = get_asteroid(query)
+        return [asteroid] if asteroid else []
+
+    results = db.neo_cache.find(
+        {"name": {"$regex": query, "$options": "i"}}
+    ).limit(limit)
+
+    return list(results)
+
+
+def sync_neo_data(days: int = 7) -> int:
+    """
+    Pull recent NEO data from NASA's feed endpoint and cache it in MongoDB.
+    This is what your app.py scheduler can call every 24 hours.
+
+    Returns:
+        Number of asteroids cached.
+    """
+    end_date = datetime.date.today()
+    start_date = end_date - datetime.timedelta(days=days - 1)
+
+    params = {
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "api_key": NASA_API_KEY
+    }
+
+    try:
+        response = requests.get(NASA_FEED_URL, params=params, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"NASA feed sync failed: {e}")
+        return 0
+
+    count = 0
+    near_earth_objects = data.get("near_earth_objects", {})
+
+    for date_key in near_earth_objects:
+        for asteroid in near_earth_objects[date_key]:
+            neo_id = str(asteroid.get("id", ""))
+            if neo_id:
+                store_in_cache(asteroid, neo_id)
+                count += 1
+
+    print(f"NASA sync complete. Cached {count} asteroids.")
+    return count
+
+
+def get_dashboard_asteroids(limit: int = 20) -> list:
+    """Return cached asteroids for a simple dashboard/list view."""
+    db = get_db()
+    results = db.neo_cache.find(
+        {},
+        {
+            "_id": 1,
+            "id": 1,
+            "name": 1,
+            "estimated_diameter": 1,
+            "close_approach_data": 1,
+            "hazardous": 1,
+            "is_potentially_hazardous_asteroid": 1
+        }
+    ).sort("cached_at", -1).limit(limit)
 
     return list(results)

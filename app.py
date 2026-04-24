@@ -57,7 +57,7 @@ def search():
 
 @app.route("/asteroid/<asteroid_id>")
 def asteroid_detail(asteroid_id):
-    asteroid = get_asteroid_by_id(asteroid_id)
+    asteroid = get_asteroid(asteroid_id)
     if asteroid is None:
         return "asteroid not found", 404
     
@@ -114,7 +114,7 @@ def watchlist():
     saved_asteroids = []
 
     for asteroid_id in saved_ids:
-        asteroid = get_asteroid_by_id(asteroid_id)
+        asteroid = get_asteroid(asteroid_id)
         if asteroid:
             saved_asteroids.append(asteroid)
 
