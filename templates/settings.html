@@ -1,0 +1,20 @@
+{% extends "main.html" %}
+
+{% block content %}
+
+<div class="form-box">
+    <h1>Settings</h1>
+    <p>Manage your profile.</p>
+
+    <form>
+        <label for="name">Name</label>
+        <input type="text" id="name" value="{{ session.get('user_name', 'Demo User') }}">
+
+        <label for="email">Email</label>
+        <input type="email" id="email" value="demo@example.com">
+
+        <button class="button" type="button">Save</button>
+    </form>
+</div>
+
+{% endblock %}

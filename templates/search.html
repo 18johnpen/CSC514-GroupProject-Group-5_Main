@@ -1,0 +1,44 @@
+{% extends "main.html" %}
+
+{% block content %}
+
+<h1>Search for Near-Earth Objects</h1>
+<p>Enter an asteroid name or NASA ID</p>
+
+<form class="search-box" method="GET" action="{{url_for('search')}}">
+    <input type="text" name="q" placeholder="Example: Apophis or 12345" value ={{query}}>
+    <button class="button" type="submit">Search</button>
+</form>
+
+{% if query %}
+    <h2>Results for "{{query}}"</h2>
+{% endif %}
+
+
+{% if results %}
+
+    <div class="grid">
+        {% for asteroid in results %}
+            <div class="card">
+                <h3>{{asteroid.name}}</h3>
+                <p><strong>NASA ID:</strong> {{ asteroid.id }}</p>
+
+                {% if asteroid.hazardous %}
+                    <p><span class="badge badge-danger">Potentially Hazardous</span></p>
+                {% else %}
+                    <p><span class="badge badge-safe">Not Hazardous</span></p>
+                {% endif %}
+
+                <a class="button" href="{{url_for('asteroid_detail', asteroid_id=asteroid.id)}}">View Details</a>
+            </div>
+        {% endfor %}
+    </div>
+
+{% else %}
+    <div class="card">
+        <p>No Near-Earth Objects found. Try searching again.</p>
+    </div>
+
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "main.html" %}
+
+{% block content %}
+
+<section class="hero">
+    <h1>Track Near Earth Objects!</h1>
+    <p>Search for asteroids, view asteroid details such as size and distance from earth, and 
+        save these objects to your own personal watchlist!
+    </p>
+    <a class="button" href="{{url_for('search')}}">Search</a>
+</section>
+
+<section class="grid" style="margin-top: 25px;">
+    <div class="card">
+        <h2>Search</h2>
+        <p>Look up asteroids by name or NASA reference ID.</p>
+    </div>
+
+    <div class="card">
+        <h2>Details</h2>
+        <p>Open an asteroid detail page to see the hazard status, size, speed, and distance from Earth.</p>
+    </div>
+
+    <div class="card">
+        <h2>Watchlist</h2>
+        <p>Login or Register to save asteroids for easy monitoring.</p>
+    </div>
+</section>
+
+{% endblock %}
