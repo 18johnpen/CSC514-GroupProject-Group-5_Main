@@ -114,14 +114,5 @@ def settings():
     return render_template("settings.html")
 
 
-@app.route("/sync")
-def sync():
-    if not session.get("logged_in"):
-        return redirect(url_for("login_register"))
-    
-    count = sync_recent_neos()
-    return f"NASA sync complete. {count} asteroid records."
-
-
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")
