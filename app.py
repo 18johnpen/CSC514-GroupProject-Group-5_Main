@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-from apscheduler.schedulers.background import BackgroundScheduler
 from pymongo.errors import PyMongoError
 import os
 
 from mongo_setup import setup
 from neo_cache_operations import (
     get_asteroid,
-    log_search)
+    log_search,
+    search_asteroids)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
@@ -15,19 +15,6 @@ try:
     setup()
 except Exception as error:
     print(f'MongoDB setup skipped or failed: {error}')
-
-#Starts a scheduler to sync with NASA's API every 24hrs. 
-def start_scheduler():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(sync_recent_neos, "interval", hours=24, id="sync_recent_neos")
-    scheduler.start()
-
-    try:
-        sync_recent_neos()
-    except Exception as error:
-        print(f'Sync with NASA API failed: {error}')
-
-start_scheduler()
 
 
 @app.route("/")
@@ -40,7 +27,7 @@ def search():
     query = request.args.get("q", "").strip()
 
     try:
-        results = search_cached_asteroids(query)
+        results = search_asteroids(query)
     except PyMongoError as error:
         print(f"MongoDB search failed: {error}")
         results = []

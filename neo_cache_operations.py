@@ -170,7 +170,7 @@ def log_search(user_id: int, query: str, neo_id: str | None, result_count: int, 
         "user_id": user_id,
         "query": query,
         "neo_id": neo_id,
-        "timestamp": datetime.datetime.utcnow(),
+        "timestamp": datetime.datetime.now(datetime.timezone.utc),
         "result_count": result_count,
         "search_type": search_type
     }
